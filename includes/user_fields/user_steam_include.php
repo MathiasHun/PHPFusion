@@ -39,7 +39,7 @@ if ($profile_method == "input") {
 } else if ($profile_method == "display") {
     $link = '';
     if ($field_value) {
-        $link = !preg_match("@^http(s)?\:\/\/@i", $field_value) ? "https://www.steamcommunity.com/id/".$field_value : $field_value;
+        $link = !preg_match("@^http(s)?\:\/\/@i", $field_value) ? "https://steamcommunity.com/profiles/".$field_value : $field_value;
         $field_value = (fusion_get_settings('index_url_userweb') ? "" : "<!--noindex-->")."<a href='".$link."' title='".$field_value."' ".(fusion_get_settings('index_url_userweb') ? "" : "rel='nofollow noopener noreferrer' ")."target='_blank'>".$locale['uf_steam_desc']."</a>".(fusion_get_settings('index_url_userweb') ? "" : "<!--/noindex-->");
     }
     $user_fields = [
