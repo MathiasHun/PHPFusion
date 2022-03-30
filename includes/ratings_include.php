@@ -82,7 +82,7 @@ function showratings($rating_type, $rating_item_id, $rating_link) {
                 'allowclear'           => TRUE,
                 'display_search_count' => -1
             ]);
-            echo form_button('post_rating', $locale['r103'], $locale['r103'], ['class' => 'btn-primary btn-block']);
+            echo form_button('post_rating', $locale['r103'], $locale['r103'], ['class' => 'btn-primary']);
             echo closeform();
             echo "</div>\n";
         }
