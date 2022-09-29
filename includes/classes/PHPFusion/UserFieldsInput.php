@@ -15,6 +15,7 @@
 | copyright header is strictly prohibited without
 | written permission from the original author(s).
 +--------------------------------------------------------*/
+
 namespace PHPFusion;
 
 use Defender;
@@ -25,19 +26,30 @@ use Defender;
  * @package PHPFusion
  */
 class UserFieldsInput {
+
     public $adminActivation = 1;
+
     public $emailVerification = 1;
+
     public $verifyNewEmail = FALSE;
+
     public $userData = ['user_name' => NULL];
+
     public $validation = 0;
+
     public $registration = FALSE;
 
     // On insert or admin edit
     public $skipCurrentPass = FALSE; // FALSE to skip pass. True to validate password. New Register always FALSE.
+
     public $isAdminPanel = FALSE;
+
     private $_completeMessage;
+
     private $_method;
+
     private $_userEmail;
+
     private $_userName;
 
     // Passwords
@@ -208,6 +220,7 @@ class UserFieldsInput {
             $this->_userName = sanitizer("user_name", "", "user_name");
 
             if (!empty($this->_userName)) {
+
                 $uban = explode(',', fusion_get_settings('username_ban'));
 
                 if (!defined('ADMIN_PANEL') && $this->registration) {
@@ -653,15 +666,12 @@ class UserFieldsInput {
 
         // hidden input tamper check - user_hash must not be changed.
         // id request spoofing request
-        $a_check = ($this->userData["user_password"] != sanitizer("user_hash", "", "user_hash"));
-        $b_check = ($this->userData['user_id'] != fusion_get_userdata('user_id'));
-        // for admin with sufficient rights, skip all these formats
-        if (iADMIN && checkrights("M")) {
-            $a_check = FALSE;
-            $b_check = FALSE;
-        }
-        if ($a_check or $b_check) {
-            fusion_stop();
+        if (!(iADMIN && checkrights('M')) ||
+            ($this->userData['user_password'] != sanitizer("user_hash", "", "user_hash")) ||
+            ($this->data['user_id'] != fusion_get_userdata('user_id'))) {
+            fusion_stop($locale['error_request']);
+
+            return FALSE;
         }
 
         // check for password match
