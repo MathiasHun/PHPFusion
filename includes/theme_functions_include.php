@@ -16,9 +16,12 @@
 | written permission from the original author(s).
 +--------------------------------------------------------*/
 
+use PHPFusion\BreadCrumbs;
 use PHPFusion\Database\DatabaseFactory;
 use PHPFusion\OutputHandler;
 use PHPFusion\Panels;
+use PHPFusion\QuantumFields;
+use PHPFusion\SiteLinks;
 
 defined('IN_FUSION') || exit;
 
@@ -114,7 +117,7 @@ function showbenchmark($show_sql_performance = FALSE, $performance_threshold = '
         $modal .= parse_text($modal_body, [
             'parse_smileys' => FALSE,
             'descript'      => FALSE,
-            'parse_usres'   => FALSE
+            'parse_users'   => FALSE
         ]);
         $modal .= modalfooter("<h4><strong>Total Time Expended in ALL SQL Queries: ".$time." seconds</strong></h4>");
         $modal .= closemodal();
@@ -157,18 +160,17 @@ function showmemoryusage() {
  *
  * @return string
  */
-function showcopyright($class = "", $nobreak = FALSE) {
+function showcopyright($class = "", $nobreak = FALSE, $epal = FALSE) {
     $link_class = $class ? " class='$class' " : "";
 
-    $copyright = "Powered by <a href='https://phpfusion.com' ".$link_class."target='_blank'>PHPFusion</a>. Copyright &copy; ".date("Y")." PHP Fusion Inc. ";
-    $copyright .= $nobreak ? "&nbsp;" : "<br />\n";
+    $info = "Powered by <a href='https://phpfusion.com' ".$link_class."target='_blank'>PHPFusion</a>. Copyright &copy; ".date("Y")." PHP Fusion Inc. ";
+    $info .= $nobreak ? "&nbsp;" : "<br />\n";
     $license = "Released as free software without warranties under <a href='https://www.gnu.org/licenses/agpl-3.0.html'".$link_class." target='_blank'>GNU Affero GPL</a> v3.";
-
-    /*if (fusion_get_settings('license') == 'epal') {
+    if ($epal == TRUE) {
         $license = "Published without warranties under <a href='https://www.phpfusion.com/licensing/?epal' ".$link_class." target='_blank'>EPAL</a>.";
-    }*/
+    }
 
-    return $copyright.$license;
+    return $info.$license;
 }
 
 /**
@@ -196,7 +198,7 @@ function showprivacypolicy() {
     if (!empty(fusion_get_settings('privacy_policy'))) {
         $html .= "<a href='".BASEDIR."print.php?type=P' id='privacy_policy'>".fusion_get_locale('global_176')."</a>";
         $modal = openmodal('privacy_policy', fusion_get_locale('global_176'), ['button_id' => 'privacy_policy']);
-        $modal .= parse_text(\PHPFusion\QuantumFields::parseLabel(fusion_get_settings('privacy_policy')));
+        $modal .= parse_text(QuantumFields::parseLabel(fusion_get_settings('privacy_policy')));
         $modal .= closemodal();
         add_to_footer($modal);
     }
@@ -254,17 +256,21 @@ if (!function_exists('get_theme_settings')) {
 
 /**
  * JavaScript that makes HTML table sortable.
+ * https://mottie.github.io/tablesorter/docs/#Getting-Started
  *
  * @param string $table_id Table ID
  *
  * @return string
  */
-function fusion_sort_table($table_id) {
-    if (!defined('TABLE_SORTER')) {
-        define('TABLE_SORTER', TRUE);
-        add_to_footer("<script type='text/javascript' src='".INCLUDES."jquery/tablesorter/jquery.tablesorter.min.js'></script>\n");
-    }
-    add_to_jquery("$('#".$table_id."').tablesorter();");
+function fusion_sort_table($table_id, $options = []) {
+
+    $default_options = [];
+    $options += $default_options;
+
+    fusion_load_script(INCLUDES.'jquery/tablesorter/theme.bootstrap_4.css', 'css');
+    fusion_load_script(INCLUDES.'jquery/tablesorter/jquery.tablesorter.js');
+
+    add_to_jquery("$('#".$table_id."').tablesorter(".json_encode($options).");");
 
     return "tablesorter";
 }
@@ -330,11 +336,14 @@ if (!function_exists('openmodal') &&
     function openmodal($id, $title, $options = []) {
         $locale = fusion_get_locale();
         $options += [
-            'class'        => !empty($options['class']) ?: 'modal-lg',
+            'class'        => '',
+            "body_class"   => "",
             'button_id'    => '',
             'button_class' => '',
             'static'       => FALSE,
             'hidden'       => FALSE,  // force a modal to be hidden at default, you will need a jquery trigger $('#your_modal_id').modal('show'); manually
+            'size'         => 2,
+            'screen_size'  => 2,
         ];
 
         $modal_trigger = '';
@@ -343,28 +352,54 @@ if (!function_exists('openmodal') &&
         }
 
         if ($options['static'] && !empty($modal_trigger)) {
-            OutputHandler::addToJQuery("$('".$modal_trigger."').bind('click', function(e){ $('#".$id."-Modal').modal({backdrop: 'static', keyboard: false}).modal('show'); e.preventDefault(); });");
+
+            $_js = "$('#".$id."-Modal').modal({backdrop: 'static', keyboard: false}).modal('show'); 
+                e.preventDefault();
+                ";
+
+            if (defined("BOOTSTRAP5")) {
+                $_js = "new bootstrap.Modal('#$id-Modal', {backdrop: 'static', keyboard: false}).show();                
+                 e.preventDefault(); 
+                ";
+            }
+
+            $script = "$(document).on('click', '".$modal_trigger."', function(e) { $_js });";
+
         } else if ($options['static'] && empty($options['button_id'])) {
-            OutputHandler::addToJQuery("$('#".$id."-Modal').modal({	backdrop: 'static',	keyboard: false }).modal('show');");
+            // No click, just show right away
+            $script = "$('#".$id."-Modal').modal({	backdrop: 'static',	keyboard: false }).modal('show');";
+            if (defined("BOOTSTRAP5")) {
+                $script = "new bootstrap.Modal('#".$id."-Modal', {	backdrop: 'static',	keyboard: false }).show();";
+            }
+
         } else if ($modal_trigger && empty($options['static'])) {
-            OutputHandler::addToJQuery("$('".$modal_trigger."').bind('click', function(e){ $('#".$id."-Modal').modal('show'); e.preventDefault(); });");
-        } else {
-            if (!$options['hidden']) {
-                OutputHandler::addToJQuery("$('#".$id."-Modal').modal('show');");
+            $_js = "$('#".$id."-Modal').modal('show'); e.preventDefault();";
+            if (defined("BOOTSTRAP5")) {
+                $_js = "new bootstrap.Modal('#".$id."-Modal').show(); e.preventDefault();";
+            }
+
+            $script = "$(document).on('click', '".$modal_trigger."', function(e) { $_js });";
+
+        } else if (!$options['hidden']) {
+            $script = "$('#".$id."-Modal').modal('show');";
+            if (defined("BOOTSTRAP5")) {
+                $script = "new bootstrap.Modal('#".$id."-Modal').show();";
             }
         }
-        $html = "<div class='modal' id='$id-Modal' tabindex='-1' role='dialog' aria-labelledby='$id-ModalLabel' aria-hidden='true'>\n";
-        $html .= "<div class='modal-dialog ".$options['class']."' role='document'>\n";
-        $html .= "<div class='modal-content'>\n";
-        if ($title) {
-            $html .= "<div class='modal-header'>";
-            $html .= "<div class='modal-title pull-left' id='$id-title'>$title</div>\n";
-            $html .= ($options['static'] ? '' : "<button type='button' class='btn btn-default btn-sm pull-right' data-dismiss='modal'><i class='fa fa-times'></i> ".$locale['close']."</button>\n");
-            $html .= "</div>\n";
-        }
-        $html .= "<div class='modal-body'>\n";
 
-        return $html;
+        if (isset($script)) {
+            add_to_jquery($script);
+        }
+
+        $info = [
+            "id"             => $id,
+            "header_content" => $title,
+            "dismiss"        => (bool)!$options["static"],
+            "modal"          => "open",
+            "options"        => $options,
+        ];
+
+        return fusion_render(TEMPLATES."html/utils/", "modal.twig", $info, TRUE);
     }
 
     /**
@@ -376,13 +411,13 @@ if (!function_exists('openmodal') &&
      * @return string
      */
     function modalfooter($content, $dismiss = FALSE) {
-        $html = "</div>\n<div class='modal-footer'>\n";
-        $html .= $content;
-        if ($dismiss) {
-            $html .= "<button type='button' class='btn btn-default pull-right' data-dismiss='modal'>".fusion_get_locale('close')."</button>";
-        }
+        $info = [
+            "footer_content" => $content,
+            "dismiss"        => (bool)$dismiss,
+            "modal"          => "footer",
+        ];
 
-        return $html;
+        return fusion_render(TEMPLATES."html/utils/", "modal.twig", $info, TRUE);
     }
 
     /**
@@ -391,7 +426,8 @@ if (!function_exists('openmodal') &&
      * @return string
      */
     function closemodal() {
-        return "</div>\n</div>\n</div>\n</div>\n";
+        $info["modal"] = "close";
+        return fusion_render(TEMPLATES."html/utils/", "modal.twig", $info, TRUE);
     }
 }
 
@@ -584,7 +620,7 @@ if (!function_exists('showsublinks')) {
             'seperator'    => $sep,
             'navbar_class' => $class,
         ];
-        return \PHPFusion\SiteLinks::setSubLinks($options)->showSubLinks();
+        return SiteLinks::setSubLinks($options)->showSubLinks();
     }
 }
 
@@ -691,12 +727,13 @@ if (!function_exists('display_avatar')) {
 
         $link = fusion_get_settings('hide_userprofiles') == TRUE ? (iMEMBER ? $link : FALSE) : $link;
         $link = $userdata['user_id'] !== 0 ? $link : FALSE;
-        $class = ($class) ? "class='$class'" : '';
 
         $hasAvatar = $userdata['user_avatar'] && file_exists(IMAGES."avatars/".$userdata['user_avatar']) && $userdata['user_status'] != '5' && $userdata['user_status'] != '6';
         $name = !empty($userdata['user_name']) ? $userdata['user_name'] : 'Guest';
 
         $imgTpl = '<img class="avatar img-responsive '.$img_class.'" alt="'.$name.'" data-pin-nopin="true" style="display:inline; width:'.$size.'; max-height:'.$size.'" src="%s">';
+        $imgTpl = '<div data-bs-toggle="tooltip" data-popup="tooltip-custom" data-bs-placement="top" class="avatar '.($class ?? '').'" data-bs-original-title="'.$userdata['user_name'].'">'.$imgTpl.'</div>';
+
         if ($hasAvatar) {
             $img = sprintf($imgTpl, IMAGES."avatars/".$userdata['user_avatar']);
         } else {
@@ -715,7 +752,7 @@ if (!function_exists('display_avatar')) {
                 }
 
                 $size_int = (int)filter_var($size, FILTER_SANITIZE_NUMBER_INT);
-                $img = '<div class="display-inline-block va avatar '.$img_class.'" style="width:'.$size.';max-height:'.$size.';"><svg viewBox="0 0 '.$size_int.' '.$size_int.'" preserveAspectRatio="xMidYMid meet"><rect fill="#'.$color.'" stroke-width="0" y="0" x="0" width="'.$size.'" height="'.$size.'"/><text class="m-t-5" font-size="'.($size_int - 5).'" fill="#'.$font_color.'" x="50%" y="50%" text-anchor="middle" dy="0.325em">'.$first_char.'</text></svg></div>';
+                $img = '<div data-bs-toggle="tooltip" data-popup="tooltip-custom" data-bs-placement="top" class="avatar '.($class ?? '').'" data-bs-original-title="'.$userdata['user_name'].'"><div class="display-inline-block va avatar '.$img_class.'" style="width:'.$size.';max-height:'.$size.';"><svg viewBox="0 0 '.$size_int.' '.$size_int.'" preserveAspectRatio="xMidYMid meet"><rect fill="#'.$color.'" stroke-width="0" y="0" x="0" width="'.$size.'" height="'.$size.'"/><text class="m-t-5" font-size="'.(floor($size_int * .50)).'" fill="#'.$font_color.'" x="50%" y="50%" text-anchor="middle" dy="0.325em">'.$first_char.'</text></svg></div></div>';
             }
         }
 
@@ -762,7 +799,7 @@ function string_to_color_code($text) {
  *
  * @param string $hex HEX color code.
  *
- * @return float
+ * @return float|int
  */
 function get_color_brightness($hex) {
     $hex = str_replace('#', '', $hex);
@@ -883,12 +920,21 @@ if (!function_exists('timer')) {
     /**
      * Show time ago from timestamp.
      *
-     * @param int $time Timestamp or if empty it use time().
+     * @param null   $time Timestamp or if empty it use time().
+     * @param bool   $short_format
+     * @param string $add_text
      *
-     * @return string
+     * @return string|null
      */
-    function timer($time = NULL) {
+    function timer($time = NULL, bool $short_format = TRUE, string $add_text = ''): ?string {
+
         $locale = fusion_get_locale();
+        $timezone_offset = fusion_get_settings("serveroffset");
+        if (iMEMBER) {
+            $user_offset = fusion_get_userdata("user_timezone");
+            $timezone_offset = ($user_offset ?: $timezone_offset);
+        }
+
         if (!$time) {
             $time = time();
         }
@@ -901,8 +947,14 @@ if (!function_exists('timer')) {
         $day = 24 * $hour;
         $month = days_current_month() * $day;
         $year = (date("L", $time) > 0) ? 366 * $day : 365 * $day;
+
+        $time_obj = (new DateTime())->setTimestamp($time);
+        $time_obj->setTimezone(new DateTimeZone($timezone_offset));
+
         if ($calculated < 1) {
-            return "<abbr class='atooltip' data-toggle='tooltip' data-placement='top' title='".showdate('longdate', $time)."'>".$locale['just_now']."</abbr>\n";
+            //return "<span class='atooltip' data-toggle='tooltip' data-placement='top' title='".showdate('longdate', $time)."'>now</span>";
+            ////<time datetime="2021-10-25T07:32:08Z" title="10/25/2021 07:32  AM" data-short="3 hr">3 hours ago</time>
+            return '<time datetime="'.($time_obj->format('Y-n-j').'T'.$time_obj->format('G:i:s')).'Z">'.$locale['now'].'</time>';
         }
 
         $timer = [
@@ -914,18 +966,32 @@ if (!function_exists('timer')) {
             $second => $locale['timer_second']
         ];
 
+        if ($short_format) {
+
+            $timer = [
+                $year   => 'y',
+                $month  => 'm',
+                $day    => 'd',
+                $hour   => 'h',
+                $minute => 'min',
+                $second => 'sec',
+            ];
+        }
+
         foreach ($timer as $arr => $unit) {
             $calc = $calculated / $arr;
             if ($calc >= 1) {
                 $answer = round($calc);
                 $string = format_word($answer, $unit, ['add_count' => FALSE]);
-                $text = strtr($locale['timer'], [
-                    '[DAYS]'   => $answer." ".$string,
-                    '[AGO]'    => $locale['ago'],
-                    '[ANSWER]' => $answer,
-                    '[STRING]' => $string
-                ]);
-                return "<abbr class='atooltip' data-toggle='tooltip' data-placement='top' title='".showdate('longdate', $time)."'>".$text."</abbr>";
+                $text = strtr($locale['timer'],
+                    [
+                        '[DAYS]'   => $answer." ".$string,
+                        '[AGO]'    => $add_text,
+                        '[ANSWER]' => $answer,
+                        '[STRING]' => $string
+                    ]);
+
+                return '<time datetime="'.($time_obj->format('Y-n-j').'T'.$time_obj->format('G:i:s')).'Z">'.$text.'</time>';
             }
         }
 
@@ -995,6 +1061,53 @@ if (!function_exists('countdown')) {
 
         return NULL;
     }
+}
+/**
+ * @param $item
+ * @param $menu_items
+ *
+ * @return false|string
+ */
+function show_dropdown(array $item, array $menu_items) {
+    $item += [
+        'class'      => 'btn-default',
+        'title'      => '',
+        "icon"       => "",
+        'menu_class' => '',
+    ];
+    // translate in utils
+    ob_start();
+    ?>
+    <div class="dropdown">
+        <button class="btn<?php echo whitespace($item['class']) ?> dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <?php if ($item["icon"]) :
+                echo get_icon($item["icon"], "fa-fw mr-1");
+            endif ?>
+            <?php echo $item['title'] ?>
+        </button>
+        <ul class="dropdown-menu<?php echo whitespace($item['menu_class']) ?>">
+            <?php $menu_items = array_filter($menu_items) ?>
+            <?php foreach ($menu_items as $c_items) : ?>
+                <?php $c_items += [
+                    'li_class'   => '',
+                    'link_class' => '',
+                    'link'       => '',
+                    'title'      => '',
+                ];
+                if ($c_items["link"] == "===" || $c_items["link"] == "---") : ?>
+                    <li class="divider"></li>
+                <?php else: ?>
+
+                    <li<?php echo whitespace($c_items['li_class'] ? 'class="'.$c_items['li_class'].'"' : '') ?>>
+                        <a class="dropdown-item<?php echo whitespace($c_items['link_class'] ?? '') ?>" href="<?php echo $c_items['link'] ?>"><?php echo $c_items['title'] ?></a>
+                    </li>
+                <?php endif; ?>
+
+            <?php endforeach; ?>
+        </ul>
+    </div>
+    <?php
+    return ob_get_clean();
 }
 
 if (!function_exists('opencollapse')
@@ -1072,6 +1185,7 @@ if (!function_exists('tab_active')
         private $cookie_prefix = 'tab_js';
         private $cookie_name = '';
         private $link_mode = FALSE;
+        private $wrapper = TRUE;
 
         /**
          * Current active tab selector.
@@ -1130,6 +1244,15 @@ if (!function_exists('tab_active')
         }
 
         /**
+         * Enable wrapper for nav-wrapper
+         *
+         * @param $value
+         */
+        public function setWrapper($value) {
+            $this->wrapper = $value;
+        }
+
+        /**
          * Automatically remember tab using cookie.
          *
          * @param bool $value
@@ -1165,7 +1288,7 @@ if (!function_exists('tab_active')
          *
          * @return string
          */
-        public function openTab($tab_title, $link_active_arrkey, $id, $link = FALSE, $class = FALSE, $getname = 'section', array $cleanup_get = []) {
+        public function openTabx($tab_title, $link_active_arrkey, $id, $link = FALSE, $class = FALSE, $getname = 'section', array $cleanup_get = []) {
             $this->cookie_name = $this->cookie_prefix.'-'.$id;
             $this->link_mode = $link;
 
@@ -1220,7 +1343,7 @@ if (!function_exists('tab_active')
                 $('#".$id." > li').on('click', function() {
                     var cookieName = '".$this->cookie_name."';
                     var cookieValue = $(this).find(\"a[role='tab']\").attr('id');
-                    Cookies.set(cookieName, cookieValue);
+                    Cookies.set(cookieName, cookieValue);                    
                 });
                 var cookieName = 'tab_js-".$id."';
                 if (Cookies.get(cookieName)) {
@@ -1230,6 +1353,152 @@ if (!function_exists('tab_active')
             }
 
             return $html;
+        }
+
+
+        /**
+         * Render tab links.
+         *
+         * @param array  $tab_title          Multidimension array consisting of keys title, id, icon.
+         * @param string $link_active_arrkey tab_active() function or the $_GET request to match the $tabs['id'].
+         * @param string $id                 Unique ID.
+         * @param bool   $link               False for jquery, true for php (will reload page).
+         * @param string $class              CSS class for the nav.
+         * @param string $getname            Set getname and turn tabs into the link that listens to getname.
+         * @param array  $cleanup_get        The request key that needs to be deleted.
+         *
+         * Example:
+         * $tabs['title'][] = "Tab 1";
+         * $tabs['id'][] = "tab1";
+         * $tabs['title'][] = "Tab 2";
+         * $tabs['id'][] = "tab2";
+         * $tab_active = tab_active($tabs, 0);
+         *
+         * Jquery:
+         * echo opentab($tabs, $tab_active, 'myTab', FALSE, 'nav-pills', 'ref', ['action', 'subaction']);
+         *
+         * PHP:
+         * echo opentab($tabs, $_GET['ref'], 'myTab', TRUE, 'nav-pills', 'ref', ['action', 'subaction']);
+         * echo opentab($tabs, $_GET['ref'], 'myTab', TRUE, 'nav-pills', 'ref', ['*']); // clear all
+         *
+         * @return string
+         */
+        public function openTab($tab_title, $link_active_arrkey, $id, $link = FALSE, $class = FALSE, $getname = 'section', array $cleanup_get = []) {
+            $this->cookie_name = $this->cookie_prefix.'-'.$id;
+            $this->link_mode = $link;
+
+            $getArray = [$getname];
+            if (!empty($cleanup_get)) {
+                $getArray = array_merge_recursive($cleanup_get, $getArray);
+            }
+
+            if (empty($link) && $this->remember) {
+                if (isset($_COOKIE[$this->cookie_name])) {
+                    $link_active_arrkey = str_replace('tab-', '', $_COOKIE[$this->cookie_name]);
+                }
+            }
+
+            $info = [
+                'part'      => 'header',
+                'id'        => $id,
+                'class'     => (!empty($class) ? $class : 'nav-tabs'),
+                'link_mode' => $link,
+                'wrapper'   => $this->wrapper,
+            ];
+
+            foreach ($tab_title['title'] as $arr => $v) {
+
+                $info['tab'][$arr] = [
+                    'id'       => $tab_title['id'][$arr],
+                    'title'    => $v,
+                    'icon'     => (isset($tab_title['icon'][$arr]) ? get_icon($tab_title['icon'][$arr]) : ""),
+                    'url'      => '#',
+                    'active'   => FALSE,
+                    'dropdown' => (isset($tab_title["dropdown"][$arr])) ? array_filter($tab_title["dropdown"][$arr]) : [], // item array must contain 'link', 'title' key,
+                ];
+
+                $v_title = $v;
+                $tab_id = $tab_title['id'][$arr];
+                $icon = (isset($tab_title['icon'][$arr])) ? $tab_title['icon'][$arr] : "";
+                $link_url = '#';
+
+                if ($link) {
+
+                    $info["tab"][$arr]["active"] = ($link_active_arrkey == $tab_id);
+
+                    if (isset($tab_title["link"][$arr])) { // new link array key
+
+                        $link_url = $tab_title["link"][$arr];
+                        $info["tab"][$arr]["active"] = $tab_title["active"][$arr] ?? $info["tab"][$arr]["active"];
+
+                    } else {
+
+                        $link_url = $link.(stristr($link, '?') ? '&' : '?').$getname."=".$tab_id; // keep all request except GET array
+
+                        $keep_filtered = FALSE;
+                        if (in_array("*", $cleanup_get)) {
+                            $getArray = [];
+                            $keep_filtered = TRUE;
+                        }
+
+                        $link_url = clean_request($getname.'='.$tab_id.(check_get('aid') ? "&aid=".get('aid') : ""), $getArray, $keep_filtered);
+
+                        // check with id and set active.
+                        $info["tab"][$arr]["active"] = ($link_active_arrkey == $tab_id);
+                    }
+
+                    $info["tab"][$arr]["link"] = $link_url;
+
+                } else {
+                    $info["tab"][$arr]["active"] = $link_active_arrkey == $tab_id;
+                }
+            }
+
+            if ($link === FALSE) {
+                // Fix when the tab is in link_mode but is placed within <form>
+                add_to_jquery("
+                $('#".$id." > li > button').on('click', function(e) {e.preventDefault();});
+                ");
+            }
+
+            if (empty($link) && $this->remember) {
+
+                fusion_load_script(INCLUDES.'jscripts/js.cookie.js');
+
+                if (defined("BOOTSTRAP5")) {
+                    add_to_jquery("
+                    let ".$id."tabEvent = function() {
+                        $('#".$id." > li').on('click', function(e) {
+                            e.preventDefault();
+                            var cookieName = '".$this->cookie_name."';
+                            var cookieValue = $(this).find(\"button[role='tab']\").attr('id');
+                            Cookies.set(cookieName, cookieValue);
+                            $(this).closest('.nav').find('button').removeClass('active'); 
+                            $(this).find('button').addClass('active');
+                        });
+                        var cookieName = 'tab_js-".$id."';                    
+                        if (Cookies.get(cookieName)) {
+                            $('#".$id."').find('#'+Cookies.get(cookieName)).click();
+                        }                    
+                    };
+                    ".$id."tabEvent();
+                    ");
+                } else if (defined("BOOTSTRAP")) {
+                    add_to_jquery("
+                    $('#".$id." > li').on('click', function() {
+                        var cookieName = '".$this->cookie_name."';
+                        var cookieValue = $(this).find(\"a[role='tab']\").attr('id');
+                        Cookies.set(cookieName, cookieValue);                    
+                    });
+                    var cookieName = 'tab_js-".$id."';
+                    if (Cookies.get(cookieName)) {
+                        $('#".$id."').find('#'+Cookies.get(cookieName)).click();
+                    }
+                    ");
+                }
+            }
+
+            return fusion_render(TEMPLATES.'html/utils/', 'tabs.twig', $info, TRUE);
         }
 
         /**
@@ -1242,26 +1511,19 @@ if (!function_exists('tab_active')
          * @return string
          */
         public function openTabBody($id, $link_active_arrkey = NULL, $key = 'section') {
-            $bootstrap = defined('BOOTSTRAP4') ? ' show' : '';
-
-            if (isset($_GET[$key]) && $this->link_mode) {
-                if ($link_active_arrkey == $id) {
-                    $status = 'in active'.$bootstrap;
-                } else {
-                    $status = '';
-                }
-            } else {
-                if (!$this->link_mode) {
-                    if ($this->remember) {
-                        if (isset($_COOKIE[$this->cookie_name])) {
-                            $link_active_arrkey = str_replace('tab-', '', $_COOKIE[$this->cookie_name]);
-                        }
+            if (!$this->link_mode) {
+                if ($this->remember) {
+                    if (isset($_COOKIE[$this->cookie_name])) {
+                        $link_active_arrkey = str_replace('tab-', '', $_COOKIE[$this->cookie_name]);
                     }
                 }
-                $status = ($link_active_arrkey == $id ? " in active".$bootstrap : '');
-
             }
-            return "<div class='tab-pane fade".$status."' id='".$id."'>\n";
+
+            return fusion_render(TEMPLATES.'html/utils/', 'tabs.twig', [
+                'id'     => $id,
+                'part'   => 'openbody',
+                'active' => ($link_active_arrkey == $id)
+            ], TRUE);
         }
 
         /**
@@ -1270,7 +1532,9 @@ if (!function_exists('tab_active')
          * @return string
          */
         public function closeTabBody() {
-            return "</div>\n";
+            return fusion_render(TEMPLATES.'html/utils/', 'tabs.twig', [
+                'part' => 'closebody',
+            ], TRUE);
         }
 
         /**
@@ -1282,26 +1546,37 @@ if (!function_exists('tab_active')
          */
         public function closeTab($options = []) {
             $locale = fusion_get_locale();
-            $default_options = [
+            $options += [
                 "tab_nav" => FALSE,
+                "wrapper" => $this->wrapper,
             ];
-            $options += $default_options;
+
             if ($options['tab_nav'] == TRUE) {
-                $nextBtn = "<a class='btn btn-warning btnNext pull-right' >".$locale['next']."</a>";
-                $prevBtn = "<a class='btn btn-warning btnPrevious m-r-10'>".$locale['previous']."</a>";
-                OutputHandler::addToJQuery("
-                $('.btnNext').click(function(){
-                  $('.nav-tabs > .active').next('li').find('a').trigger('click');
-                });
-                $('.btnPrevious').click(function(){
-                  $('.nav-tabs > .active').prev('li').find('a').trigger('click');
-                });
-            ");
-                echo "<div class='clearfix'>\n".$prevBtn.$nextBtn."</div>\n";
+                add_to_jquery("
+                $('.btnNext').click(function(){ $('.nav-tabs > .active').next('li').find('a').trigger('click'); });
+                $('.btnPrevious').click(function(){ $('.nav-tabs > .active').prev('li').find('a').trigger('click'); });
+                ");
             }
 
-            return "</div>\n</div>\n";
+            return fusion_render(TEMPLATES.'html/utils/', 'tabs.twig', [
+                    'part' => 'footer',
+                ] + $options, TRUE);
         }
+    }
+
+    /**
+     * Creates a Tab instance
+     *
+     * @param string $id
+     *
+     * @return FusionTabs|mixed
+     */
+    function fusion_tab($id = 'Default') {
+        static $tab;
+        if (empty($tab[$id])) {
+            $tab[$id] = new FusionTabs();
+        }
+        return $tab[$id];
     }
 
     /**
@@ -1314,7 +1589,7 @@ if (!function_exists('tab_active')
      * @return string
      */
     function tab_active($array, $default_active, $getname = NULL) {
-        return \FusionTabs::tabActive($array, $default_active, $getname);
+        return FusionTabs::tabActive($array, $default_active, $getname);
     }
 
     /**
@@ -1359,7 +1634,8 @@ if (!function_exists('tab_active')
      * @return string
      */
     function opentab($tab_title, $link_active_arrkey, $id, $link = FALSE, $class = NULL, $getname = "section", $cleanup_get = [], $remember = FALSE) {
-        $fusion_tabs = new FusionTabs();
+        $fusion_tabs = fusion_tab();
+
         if ($remember) {
             $fusion_tabs->setRemember(TRUE);
         }
@@ -1379,9 +1655,7 @@ if (!function_exists('tab_active')
      * @return string
      */
     function opentabbody($tab_title, $tab_id, $link_active_arrkey = NULL, $link = FALSE, $key = NULL) {
-        $fusion_tabs = new FusionTabs();
-
-        return $fusion_tabs->openTabBody($tab_id, $link_active_arrkey, $key);
+        return fusion_tab()->openTabBody($tab_id, $link_active_arrkey, $key);
     }
 
     /**
@@ -1390,9 +1664,7 @@ if (!function_exists('tab_active')
      * @return string
      */
     function closetabbody() {
-        $fusion_tabs = new FusionTabs();
-
-        return $fusion_tabs->closeTabBody();
+        return fusion_tab()->closeTabBody();
     }
 
     /**
@@ -1403,9 +1675,7 @@ if (!function_exists('tab_active')
      * @return string
      */
     function closetab($options = []) {
-        $fusion_tabs = new FusionTabs();
-
-        return $fusion_tabs->closeTab($options);
+        return fusion_tab()->closeTab($options);
     }
 }
 
@@ -1423,17 +1693,21 @@ if (!function_exists('display_ratings')) {
      */
     function display_ratings($total_sum, $total_votes, $link = NULL, $class = NULL, $mode = 1) {
         $locale = fusion_get_locale();
-        $start_link = $link ? "<a class='comments-item ".$class."' href='".$link."'>" : '';
+
+        // @todo: expand display ratings
+        // add in -  <meta itemprop="worstRating" content = "1"/>
+        // add in - <span itemprop="bestRating">5</span>
+        $start_link = $link ? "<a itemprop='url' class='comments-item ".$class."' href='".$link."'>" : '';
         $end_link = $link ? "</a>\n" : '';
         $average = $total_votes > 0 ? number_format($total_sum / $total_votes, 2) : 0;
-        $str = $mode == 1 ? $average.$locale['global_094'].format_word($total_votes, $locale['fmt_rating']) : "$average/$total_votes";
+        $str = $mode == 1 ? "<span itemprop='ratingValue'>".$average."</span>".$locale['global_094']."<span itemprop='reviewCount'>".format_word($total_votes, $locale['fmt_rating'])."</span>" : "$average/$total_votes";
         if ($total_votes > 0) {
             $answer = $start_link."<i title='".$locale['ratings']."' class='fa fa-star-o m-l-0'></i>".$str.$end_link;
         } else {
             $answer = $start_link."<i title='".sprintf($locale['global_089a'], $locale['global_077'])."' class='fa fa-star-o high-opacity m-l-0'></i> ".$str.$end_link;
         }
 
-        return $answer;
+        return "<span itemprop='aggregateRating' itemscope itemtype='https://schema.org/AggregateRating'>".$answer."</span>";
     }
 }
 
@@ -1450,16 +1724,18 @@ if (!function_exists('display_comments')) {
      */
     function display_comments($total_sum, $link = NULL, $class = NULL, $mode = 1) {
         $locale = fusion_get_locale();
-        $start_link = $link ? "<a class='comments-item ".$class."' href='".$link."' {%title%} >" : '';
+        $start_link = $link ? "<a itemprop='url' class='comments-item ".$class."' href='".$link."' {%title%} >" : '';
         $end_link = $link ? "</a>\n" : '';
-        $str = $mode == 1 ? format_word($total_sum, $locale['fmt_comment']) : $total_sum;
+        $str = "<span itemprop='commentCount'>\n";
+        $str .= $mode == 1 ? format_word($total_sum, $locale['fmt_comment']) : $total_sum;
+        $str .= "</span>\n";
         if ($total_sum > 0) {
             $start_link = strtr($start_link, ['{%title%}' => "title='".$locale['global_073']."'"]);
         } else {
             $start_link = strtr($start_link, ['{%title%}' => "title='".sprintf($locale['global_089'], $locale['global_077'])."'"]);
         }
 
-        return $start_link.$str.$end_link;
+        return "<span itemscope itemtype='https://schema.org/Comment'>\n".$start_link.$str.$end_link."</span>\n";
     }
 }
 
@@ -1615,7 +1891,7 @@ if (!function_exists('render_breadcrumbs')) {
      * @return string
      */
     function render_breadcrumbs($key = 'default') {
-        $breadcrumbs = \PHPFusion\BreadCrumbs::getInstance($key);
+        $breadcrumbs = BreadCrumbs::getInstance($key);
         $html = '<ol class="'.$breadcrumbs->getCssClasses().'">';
         foreach ($breadcrumbs->toArray() as $crumb) {
             $html .= '<li class="breadcrumb-item '.$crumb['class'].($crumb['link'] ? '' : ' active').'">';
@@ -1686,7 +1962,7 @@ if (!function_exists('render_user_tags')) {
  * @return string
  */
 function fusion_theme_framework() {
-    $level = ['BOOTSTRAP6', 'BOOTSTRAP5', 'BOOTSTRAP4', 'BOOTSTRAP'];
+    $level = ['BOOTSTRAP5', 'BOOTSTRAP4', 'BOOTSTRAP'];
     foreach ($level as $framework) {
         if (defined($framework)) {
             return $framework;
