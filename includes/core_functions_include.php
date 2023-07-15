@@ -1243,14 +1243,19 @@ function getuserlevel($userlevel) {
  * Get a user status by the numeric code of status.
  *
  * @param int $userstatus Status code 0 - 8.
+ * @param int $join_timestamp User lastvisit.
  *
  * @return string|null The name of the given user status, null if it does not exist.
  */
-function getuserstatus($userstatus) {
+function getuserstatus($userstatus, $join_timestamp = 0) {
 
     $locale = fusion_get_locale();
 
-    return ($userstatus >= 0 and $userstatus <= 8) ? $locale['status'.$userstatus] : NULL;
+    if ($join_timestamp) {
+        return ($userstatus >= 0 and $userstatus <= 8) ? $locale['status'.$userstatus] : NULL;
+    }
+
+    return $locale['status_pending'];
 }
 
 /**
@@ -1970,17 +1975,17 @@ function showdate($format, $val, $options = []) {
         if (in_array($format, ['shortdate', 'longdate', 'forumdate', 'newsdate'])) {
             $format = fusion_get_settings($format);
 
-            return format_date($format, $offset, $client_dt);
+            return format_date($format, $offset);
         }
 
-        return format_date($format, $offset, $client_dt);
+        return format_date($format, $offset);
 
     }
 
     $format = fusion_get_settings($format);
     $offset = time() + $offset;
 
-    return format_date($format, $offset, $client_dt);
+    return format_date($format, $offset);
 }
 
 /**
@@ -1991,7 +1996,7 @@ function showdate($format, $val, $options = []) {
  *
  * @return string
  */
-function format_date($format, $timestamp, $offset) {
+function format_date($format, $timestamp) {
     $locale = fusion_get_locale();
     $format = str_replace(
         ['%a', '%A', '%d', '%e', '%u', '%w', '%W', '%b', '%h', '%B', '%m', '%y', '%Y', '%D', '%F', '%x', '%n', '%t', '%H', '%k', '%I', '%l', '%M', '%p', '%P', '%r', '%R', '%S', '%T', '%X', '%z', '%Z', '%c', '%s', '%%'],
@@ -2006,19 +2011,22 @@ function format_date($format, $timestamp, $offset) {
     $lcweek = explode('|', $locale['weekdays']);
     $lcshort = explode('|', $locale['shortmonths']);
     $lcmerid = explode('|', $locale['meridiem']);
+
+    $date = DateTimeImmutable::createFromFormat('U', $timestamp);
+
     for ($i = 0; $i < $format_length; $i ++) {
         switch ($format[$i]) {
             case 'D':
-                $new_format .= addcslashes(substr($lcweek[$offset->format('w')], 0, 2), '\\A..Za..z');
+                $new_format .= addcslashes(substr($lcweek[$date->format('w')], 0, 2), '\\A..Za..z');
                 break;
             case 'l':
-                $new_format .= addcslashes($lcweek[$offset->format('w')], '\\A..Za..z');
+                $new_format .= addcslashes($lcweek[$date->format('w')], '\\A..Za..z');
                 break;
             case 'F':
-                $new_format .= addcslashes($lcmonth[$offset->format('n')], '\\A..Za..z');
+                $new_format .= addcslashes($lcmonth[$date->format('n')], '\\A..Za..z');
                 break;
             case 'M':
-                $new_format .= addcslashes($lcshort[$offset->format('n')], '\\A..Za..z');
+                $new_format .= addcslashes($lcshort[$date->format('n')], '\\A..Za..z');
                 break;
             case 'a':
                 $mofset = $offset->format('a') == 'am' ? 0 : 1;
@@ -2040,7 +2048,6 @@ function format_date($format, $timestamp, $offset) {
                 break;
         }
     }
-    $date = DateTimeImmutable::createFromFormat('U', $timestamp);
 
     return $date->format($new_format);
 }
@@ -2689,7 +2696,7 @@ function fusion_load_script($file_path, $file_type = "script", $html = FALSE, $c
             add_to_footer($html_tag);
 
         } else if ($file_type == "css") {
-            $html_tag = "<link rel='stylesheet' href='$file_path' media='all'>";
+            $html_tag = "<link rel='stylesheet' href='$file_path' type='text/css' media='all'>";
             if ($html === TRUE) {
                 return $html_tag;
             }
