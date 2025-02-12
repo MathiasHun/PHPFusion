@@ -15,6 +15,7 @@
 | copyright header is strictly prohibited without
 | written permission from the original author(s).
 +--------------------------------------------------------*/
+
 namespace PHPFusion\Installer\Lib;
 
 use PHPFusion\Installer\InstallCore;
@@ -26,15 +27,16 @@ class CoreSettings {
      *
      * @return array[]|\array[][]|mixed|null
      */
-    public static function get_table_rows($table_name, $localeset = 'English') {
+    public static function get_table_rows( $table_name, $localeset = 'English' ) {
         $locale = fusion_get_locale();
 
-        include BASEDIR."locale/".$localeset."/setup.php";
-        include BASEDIR."locale/".$localeset."/admin/members_email.php";
+        include BASEDIR . 'locale/' . $localeset . '/setup.php';
+        include BASEDIR . 'locale/' . $localeset . '/admin/members_email.php';
+        include BASEDIR . 'locale/' . $localeset . '/policies.php';
 
-        $siteurl = rtrim(dirname(get_current_url()), '/').'/';
-        $siteurl = str_replace('install/', '', $siteurl);
-        $url = parse_url($siteurl);
+        $siteurl = rtrim( dirname( get_current_url() ), '/' ) . '/';
+        $siteurl = str_replace( 'install/', '', $siteurl );
+        $url = parse_url( $siteurl );
 
         $table_settings['settings'] = [
             'insert' => [
@@ -51,7 +53,7 @@ class CoreSettings {
                 ['settings_name' => 'sitebanner2', 'settings_value' => ''],
                 ['settings_name' => 'siteemail', 'settings_value' => ''],//fill in
                 ['settings_name' => 'siteusername', 'settings_value' => ''],// fill in
-                ['settings_name' => 'siteintro', 'settings_value' => "<div style=\'text-align:center\'>".$locale['setup_3650']."</div>"],
+                ['settings_name' => 'siteintro', 'settings_value' => "<div style=\'text-align:center\'>" . $locale['setup_3650'] . "</div>"],
                 ['settings_name' => 'description', 'settings_value' => $locale['setup_1216']],
                 ['settings_name' => 'keywords', 'settings_value' => 'PHPFusion, CMS, Community, Hosting, Domain, Portal, Open Source, AGPL, PHP, MySQL, HTML, CSS, JS'],
                 ['settings_name' => 'footer', 'settings_value' => ''],
@@ -84,9 +86,7 @@ class CoreSettings {
                 ['settings_name' => 'enable_deactivation', 'settings_value' => 0],
                 ['settings_name' => 'deactivation_period', 'settings_value' => 365],
                 ['settings_name' => 'deactivation_response', 'settings_value' => 14],
-                ['settings_name' => 'enable_terms', 'settings_value' => 0],
-                ['settings_name' => 'license_agreement', 'settings_value' => ''],
-                ['settings_name' => 'license_lastupdate', 'settings_value' => 0],
+                ['settings_name' => 'enable_terms', 'settings_value' => 1],
                 ['settings_name' => 'thumb_compression', 'settings_value' => 'gd2'],
                 ['settings_name' => 'tinymce_enabled', 'settings_value' => 0],
                 ['settings_name' => 'smtp_host', 'settings_value' => ''],
@@ -128,6 +128,7 @@ class CoreSettings {
                 ['settings_name' => 'captcha', 'settings_value' => 'securimage3'],
                 ['settings_name' => 'password_algorithm', 'settings_value' => 'sha256'],
                 ['settings_name' => 'username_change', 'settings_value' => 1],
+                ['settings_name' => 'username_display', 'settings_value' => 1],
                 ['settings_name' => 'recaptcha_public', 'settings_value' => ''],
                 ['settings_name' => 'recaptcha_private', 'settings_value' => ''],
                 ['settings_name' => 'recaptcha_theme', 'settings_value' => 'light'],
@@ -138,7 +139,6 @@ class CoreSettings {
                 ['settings_name' => 'mime_check', 'settings_value' => 1],
                 ['settings_name' => 'normalize_seo', 'settings_value' => 0],
                 ['settings_name' => 'debug_seo', 'settings_value' => 0],
-                ['settings_name' => 'privacy_policy', 'settings_value' => ''],
                 ['settings_name' => 'create_og_tags', 'settings_value' => 1],
                 ['settings_name' => 'index_url_bbcode', 'settings_value' => 1],
                 ['settings_name' => 'index_url_userweb', 'settings_value' => 1],
@@ -163,11 +163,15 @@ class CoreSettings {
                 ['settings_name' => 'auth_login_expiry', 'settings_value' => '300'],
                 ['settings_name' => 'auth_login_length', 'settings_value' => '6'],
                 ['settings_name' => 'auth_login_attempts', 'settings_value' => '3'],
-                ['settings_name' => 'privacy_lastupdate', 'settings_value' => '0'],
                 ['settings_name' => 'login_session_expiry', 'settings_value' => '43200'],
                 ['settings_name' => 'login_session_ext_expiry', 'settings_value' => '86400'],
                 ['settings_name' => 'admin_session_expiry', 'settings_value' => '43200'],
                 ['settings_name' => 'admin_session_ext_expiry', 'settings_value' => '86400'],
+                ['settings_name' => 'password_length', 'settings_value' => '8'],
+                ['settings_name' => 'password_char', 'settings_value' => '1'],
+                ['settings_name' => 'password_num', 'settings_value' => '1'],
+                ['settings_name' => 'password_case', 'settings_value' => '1'],
+                ['settings_name' => 'blaclist_site', 'settings_value' => 'http://www.google.com/'],
                 ['settings_name' => 'license', 'settings_value' => 'agpl'],
                 ['settings_name' => 'license_key', 'settings_value' => ''],
             ]
@@ -192,6 +196,11 @@ class CoreSettings {
                 [
                     'mlt_rights' => 'PN',
                     'mlt_title'  => $locale['setup_3211'],
+                    'mlt_status' => 1
+                ],
+                [
+                    'mlt_rights' => 'TOS',
+                    'mlt_title'  => $locale['pol_100'],
                     'mlt_status' => 1
                 ]
             ]
@@ -284,6 +293,14 @@ class CoreSettings {
                     'admin_image'    => 'infusions.png',
                     'admin_title'    => $locale['setup_3014'],
                     'admin_link'     => 'infusions.php',
+                    'admin_page'     => 3,
+                    'admin_language' => $localeset
+                ],
+                [
+                    'admin_rights'   => 'TOS',
+                    'admin_image'    => 'policy.png',
+                    'admin_title'    => $locale['pol_100'],
+                    'admin_link'     => 'policies.php',
                     'admin_page'     => 3,
                     'admin_language' => $localeset
                 ],
@@ -1021,6 +1038,40 @@ class CoreSettings {
                     'template_sender_email' => '',
                     'template_language'     => $localeset
                 ],
+            ]
+        ];
+        $table_settings['policies'] = [
+            'insert' => [
+                [
+                    'policy_name'     => $locale['pol_200'],
+                    'policy_content'  => $locale['pol_202'],
+                    'policy_date'     => time(),
+                    'policy_language' => $localeset
+                ],
+                [
+                    'policy_name'     => $locale['pol_300'],
+                    'policy_content'  => $locale['pol_302'],
+                    'policy_date'     => time(),
+                    'policy_language' => $localeset
+                ],
+                [
+                    'policy_name'     => $locale['pol_400'],
+                    'policy_content'  => $locale['pol_402'],
+                    'policy_date'     => time(),
+                    'policy_language' => $localeset
+                ],
+                [
+                    'policy_name'     => $locale['pol_500'],
+                    'policy_content'  => $locale['pol_502'],
+                    'policy_date'     => time(),
+                    'policy_language' => $localeset
+                ],
+                [
+                    'policy_name'     => $locale['pol_600'],
+                    'policy_content'  => $locale['pol_602'],
+                    'policy_date'     => time(),
+                    'policy_language' => $localeset
+                ]
             ]
         ];
 

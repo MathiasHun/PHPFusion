@@ -17,7 +17,6 @@
 +--------------------------------------------------------*/
 defined('IN_FUSION') || exit;
 
-$icon = "<img src='".IMAGES."user_fields/social/web.svg' title='Website' alt='Website'/>";
 // Display user field input
 if ($profile_method == "input") {
     $options += [
@@ -25,7 +24,6 @@ if ($profile_method == "input") {
         // We only accept websites that start with http(s)
         'regex'  => 'http(s)?\:\/\/(.*?)',
         'inline' => TRUE,
-        'label_icon'  => $icon
         // TODO: Change the error text in case a value was entered but is not valid
     ];
     $user_fields = form_text('user_web', $locale['uf_web'], $field_value, $options);
@@ -38,7 +36,6 @@ if ($profile_method == "input") {
         $field_value = (fusion_get_settings('index_url_userweb') ? "" : "<!--noindex-->")."<a href='".$link."' title='".$field_value."' ".(fusion_get_settings('index_url_userweb') ? "" : "rel='nofollow noopener noreferrer' ")."target='_blank'>".$locale['uf_web_001']."</a>".(fusion_get_settings('index_url_userweb') ? "" : "<!--/noindex-->");
     }
     $user_fields = [
-        'icon'  => $icon,
         'link'  => $link,
         'title' => $locale['uf_web'],
         'value' => $field_value ?: ''

@@ -228,6 +228,12 @@ Flex
 .display-flex.gap-lg {
   gap: 1.5rem;
 }
+.display-flex > .justify-start {
+  justify-self: flex-start;
+}
+.display-flex > .justify-end {
+  justify-self: flex-end;
+}
 /** Need to used inside a block type div and height width specify **/
 .center-y {
   position: relative;
@@ -796,7 +802,6 @@ li:after {
 .form-group .select2-container-multi .select2-choices .select2-search-choice {
   box-shadow: inset 0 0 0 1.1em #f0f2f4;
   border: 0;
-  background: 0;
   padding-left: 0.5rem;
   display: flex;
   gap: 0.5rem;
@@ -1506,5 +1511,12 @@ Responsive Admin for all Admin Themes.
   display: flex;
   align-items: center;
   min-height: calc(100% - 1rem);
+}
+.bbcode_input .bbcode-popup {
+  padding: 0.5rem;
+}
+.bbcode_input img.smiley {
+  width: 18px;
+  height: 18px;
 }
 /*# sourceMappingURL=default.css.map */

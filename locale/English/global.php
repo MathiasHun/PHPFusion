@@ -87,6 +87,10 @@ $locale['status8'] = "Inactive";
 $locale['status_pending'] = "Pending Activation";
 // Forum Moderator Level(s)
 $locale['userf1'] = "Moderator";
+
+// Slogan
+$locale['slogan'] = "Infuse your web presence with PHPFusion";
+
 // Navigation
 $locale['global_001'] = "Navigation";
 $locale['global_002'] = "No links defined";
@@ -152,7 +156,7 @@ $locale['global_073b'] = " Comment";
 $locale['global_074'] = " Reads";
 $locale['global_074b'] = " Read";
 $locale['global_075'] = "Print";
-$locale['print'] = "Print";
+
 $locale['global_076'] = "Edit";
 $locale['global_077'] = "News";
 $locale['global_078'] = "No News has been posted yet";
@@ -177,15 +181,15 @@ $locale['global_092'] = "Page ";
 $locale['global_093'] = " of ";
 $locale['global_094'] = " out of ";
 // Guest User Menu
-$locale['global_100'] = "Sign In";
+$locale['global_100'] = "Sign in";
 $locale['global_101'] = "Login ID";
 $locale['global_101a'] = "Enter Username";
 $locale['global_101b'] = "Enter Email";
 $locale['global_101c'] = "Enter Email or Username";
 $locale['global_102'] = "Password";
 $locale['global_103'] = "Stay signed in";
-$locale['global_104'] = "Sign In";
-$locale['global_105'] = "Not a member yet? [LINK]Click here[/LINK] to register.";
+$locale['global_104'] = "Sign in";
+$locale['global_105'] = "Not a member yet? [LINK]Join now[/LINK]";
 $locale['global_106'] = "[LINK]Forgot Password?[/LINK]";
 $locale['global_107'] = "Register";
 $locale['global_108'] = "Lost password";
@@ -338,6 +342,13 @@ Regards,<br/>[SITEUSERNAME]";
 //$locale['global_457'] = "Hi USER_NAME,
 //<br/>A new password has been set for your account at [SITENAME]. Please find the enclosed new login details:<br/>
 //Username: USER_NAME<br/>Password: [PASSWORD]<br/>Regards,<br/>[SITEUSERNAME]";
+
+$locale['global_456'] = 'One time password is successfully verified. You are now logged in.';
+$locale['global_457'] = 'Invalid Authentication Code. You have %d attempt(s) left.';
+
+
+
+
 $locale['global_458'] = "New password has been set for USER_NAME";
 $locale['global_459'] = "New password has been set for USER_NAME, and email was not sent. Please ensure to tell the user of the new details.";
 // Function parsebytesize()
@@ -446,6 +457,7 @@ $locale['rights'] = "Rights";
 $locale['info'] = "Info";
 $locale['image'] = "Image";
 // Forms
+$locale['print'] = "Print";
 $locale['choose'] = "Please Choose One...";
 $locale['no_opts'] = "No selection";
 $locale['root'] = "As Parent";

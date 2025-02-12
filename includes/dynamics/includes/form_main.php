@@ -30,7 +30,7 @@ function openform($form_name, $method, $action_url = FORM_REQUEST, array $option
 
     $method = (strtolower($method) == 'post') ? 'post' : 'get';
 
-    $default_options = [
+    $options += [
         'form_id'    => $form_name,
         'class'      => '', // CSS class properties.
         'enctype'    => FALSE, // Set true for allowing multipart.
@@ -39,8 +39,6 @@ function openform($form_name, $method, $action_url = FORM_REQUEST, array $option
         'on_submit'  => '', // Adds javascript function on form submit.
         'honeypot'   => TRUE, // Enables honeypots to counter botting.
     ];
-
-    $options += $default_options;
 
     if (!$action_url) {
         $action_url = FORM_REQUEST;
@@ -52,7 +50,7 @@ function openform($form_name, $method, $action_url = FORM_REQUEST, array $option
         $class .= " warning";
     }
 
-    $html = "<form name='".$form_name."' id='".$options['form_id']."' method='".$method."' action='".$action_url."' role='form' class='".($options['inline'] ? "form-inline " : '').(!empty($class) ? $class : 'm-0')."'".($options['enctype'] ? " enctype='multipart/form-data'" : '').($options['on_submit'] ? " onSubmit='".$options['on_submit']."'" : '').">\n";
+    $html = "<form name='".$form_name."' id='".$options['form_id']."' method='".$method."' action='".$action_url."' role='form' class='needs-validation ".($options['inline'] ? "form-inline " : '').(!empty($class) ? $class : 'm-0')."'".($options['enctype'] ? " enctype='multipart/form-data'" : '').($options['on_submit'] ? " onSubmit='".$options['on_submit']."'" : '')." novalidate>\n";
 
     if ($method == 'post') {
         $token = fusion_get_token($options['form_id'], $options['max_tokens']);
@@ -88,6 +86,16 @@ function closeform() {
 function clean_input_name($value) {
     $re = '/\[(.*?)\]/m';
     return preg_replace($re, '', $value);
+}
+
+/**
+ * @param mixed $value
+ * 'input_id[]' becomes 'input_id-', due to foreach has multiple options, and these DOM selectors are needed
+ * @return array|string
+ */
+function clean_input_id($value, $replace = '_') {
+    $re = '/\[(.*?)\]/m';
+    return preg_replace($re, $replace, $value);
 }
 
 /**

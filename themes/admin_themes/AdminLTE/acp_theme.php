@@ -17,6 +17,7 @@
 | written permission from the original author(s).
 +--------------------------------------------------------*/
 defined('IN_FUSION') || exit;
+const WEBICON = ['fa5'];
 
 if (!defined('ALTE_LOCALE')) {
     if (file_exists(THEMES.'admin_themes/AdminLTE/locale/'.LANGUAGE.'.php')) {
@@ -29,7 +30,7 @@ if (!defined('ALTE_LOCALE')) {
 const ADMINLTE = THEMES.'admin_themes/AdminLTE/';
 require_once ADMINLTE.'acp_autoloader.php';
 
-const BOOTSTRAP = TRUE;
+const BOOTSTRAP = 3;
 const FONTAWESOME = TRUE;
 
 if (!check_admin_pass('')) {
